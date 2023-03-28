@@ -101,21 +101,21 @@ module peeringmodule 'Modules/vnetpeering.bicep' = {
   ]
 }
 
-// Application Gateway module
-module appgwmodule 'Modules/appgw.bicep' = {
-  name: 'appgw-modulename'
-  params: {
-    location: location
-    logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-    principalId: USER_OBJECT_ID
-  }
-  dependsOn: [
-    hubvnetmodule
-    azfwmodule
-  ]
-}
+// // Application Gateway module
+// module appgwmodule 'Modules/appgw.bicep' = {
+//   name: 'appgw-modulename'
+//   params: {
+//     location: location
+//     logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+//     principalId: USER_OBJECT_ID
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//     azfwmodule
+//   ]
+// }
 
 // Azure Bastion module
 module bastionmodule 'Modules/bastion.bicep' = {
