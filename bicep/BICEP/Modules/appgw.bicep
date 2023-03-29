@@ -1,6 +1,7 @@
 // Application Gateway
 param location string
 param hubVnetName string
+param appgwSubnetName string
 param spokeVnetName string
 //param spokeSubnetName string
 //param spokeSubnetAddressPrefix string
@@ -29,6 +30,9 @@ var WAF_POLICY_NAME = 'wafpolicy-poc-appgw-stag-001'
 // Reference to the hub-vnet
 resource existinghubVnet 'Microsoft.Network/virtualNetworks@2020-05-01' existing = {
   name: hubVnetName
+  resource existingappgwsubnet 'subnets' existing = {
+    name: appgwSubnetName
+  }
 }
 
 // Reference to the spoke-vnet
@@ -78,7 +82,7 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
 }
 
 // Deploy Waf Policy
-resource wafpolicy 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2020-05-01' = {
+resource wafpolicy 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPolicies@2021-08-01' = {
   name: WAF_POLICY_NAME
   location: location
   tags: TAG_VALUE
@@ -125,123 +129,113 @@ resource wafpolicy 'Microsoft.Network/ApplicationGatewayWebApplicationFirewallPo
         
 
 // Deploy Application Gateway
-resource appgw 'Microsoft.Network/applicationGateways@2020-05-01' = {
+resource appgw 'Microsoft.Network/applicationGateways@2021-08-01' = {
   name: APPGW_NAME
   location: location
   tags: TAG_VALUE
   properties: {
-  sku: {
-    name: 'WAF_v2'
-    //name: 'Standard_waf_v2'
-    tier: 'WAF_v2'
-    capacity: 2
-  }
-  gatewayIPConfigurations: [
-     {
-       name: APPGW_IP_CONFIG_NAME
-       properties: {
-         subnet: {
-           id: existinghubVnet.properties.subnets[3].id
+    sku: {
+      name: 'WAF_v2'
+      tier: 'WAF_v2'
+      capacity: 2
+    }
+    gatewayIPConfigurations: [
+       {
+         name: APPGW_IP_CONFIG_NAME
+         properties: {
+           subnet: {
+             id: existinghubVnet::existingappgwsubnet.id
+           }
          }
        }
-     }
-  ]
-  frontendIPConfigurations: [
-    {
-      name: APPGW_FRONTEND_IP_CONFIG_NAME
-      properties: {
-        privateIPAllocationMethod: 'Dynamic'
-        publicIPAddress: {
-          id: publicIp.id
-        }
-      }
-    }
-  ]
-  frontendPorts: [
-    {
-      name: APPGW_FRONTEND_PORT_NAME
-      properties: {
-        port: 80
-      }
-    }
-  ]
-  backendAddressPools: [
-    {
-      name: APPGW_BACKEND_POOL_NAME
-      properties: {
-        /*
-        backendAddresses: [
-          {
-            // please set your backend private ip address of your VM
-            ipAddress: 'aaa'
+    ]
+    frontendIPConfigurations: [
+      {
+        name: APPGW_FRONTEND_IP_CONFIG_NAME
+        properties: {
+          privateIPAllocationMethod: 'Dynamic'
+          publicIPAddress: {
+            id: publicIp.id
           }
-          {
-            // please set your backend private ip address of your VM
-            ipAddress: 'bbb'
+        }
+      }
+    ]
+    frontendPorts: [
+      {
+        name: APPGW_FRONTEND_PORT_NAME
+        properties: {
+          port: 80
+        }
+      }
+    ]
+    backendAddressPools: [
+      {
+        name: APPGW_BACKEND_POOL_NAME
+        properties: {
+        }
+      }
+    ]
+    backendHttpSettingsCollection: [
+      {
+        name: APPGW_BACKEND_HTTP_SETTINGS_NAME
+        properties: {
+          port: 80
+          protocol: 'Http'
+          cookieBasedAffinity: 'Disabled'
+          pickHostNameFromBackendAddress: false
+          requestTimeout: 30
+        }
+      }
+    ]
+    httpListeners: [
+      {
+        name: APPGW_HTTP_LISTENER_NAME
+        properties: {
+          firewallPolicy: {
+            id: wafpolicy.id
           }
-        ]
-        */
-      }
-    }
-  ]
-  backendHttpSettingsCollection: [
-    {
-      name: APPGW_BACKEND_HTTP_SETTINGS_NAME
-      properties: {
-        port: 80
-        protocol: 'Http'
-        cookieBasedAffinity: 'Disabled'
-        pickHostNameFromBackendAddress: false
-        requestTimeout: 30
-      }
-    }
-  ]
-  httpListeners: [
-    {
-      name: APPGW_HTTP_LISTENER_NAME
-      properties: {
-        frontendIPConfiguration: {
-          id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', APPGW_NAME, APPGW_FRONTEND_IP_CONFIG_NAME)
-        }
-        frontendPort: {
-          id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', APPGW_NAME, APPGW_FRONTEND_PORT_NAME)
-        }
-        protocol: 'Http'
-        requireServerNameIndication: false
-      }
-    }
-  ]
-  requestRoutingRules: [
-    {
-      name: 'rule1'
-      properties: {
-        ruleType: 'Basic'
-        httpListener: {
-          id: resourceId('Microsoft.Network/applicationGateways/httpListeners', APPGW_NAME, APPGW_HTTP_LISTENER_NAME)
-        }
-        backendAddressPool: {
-          id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', APPGW_NAME, APPGW_BACKEND_POOL_NAME)
-        }
-        backendHttpSettings: {
-          id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', APPGW_NAME, APPGW_BACKEND_HTTP_SETTINGS_NAME)
+          frontendIPConfiguration: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendIPConfigurations', APPGW_NAME, APPGW_FRONTEND_IP_CONFIG_NAME)
+          }
+          frontendPort: {
+            id: resourceId('Microsoft.Network/applicationGateways/frontendPorts', APPGW_NAME, APPGW_FRONTEND_PORT_NAME)
+          }
+          protocol: 'Http'
+          requireServerNameIndication: false
         }
       }
+    ]
+    requestRoutingRules: [
+      {
+        name: 'rule1'
+        properties: {
+          ruleType: 'Basic'
+          priority: 10
+          httpListener: {
+            id: resourceId('Microsoft.Network/applicationGateways/httpListeners', APPGW_NAME, APPGW_HTTP_LISTENER_NAME)
+          }
+          backendAddressPool: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendAddressPools', APPGW_NAME, APPGW_BACKEND_POOL_NAME)
+          }
+          backendHttpSettings: {
+            id: resourceId('Microsoft.Network/applicationGateways/backendHttpSettingsCollection', APPGW_NAME, APPGW_BACKEND_HTTP_SETTINGS_NAME)
+          }
+        }
+      }
+    ]
+    enableHttp2: false
+    webApplicationFirewallConfiguration: {
+      enabled: true
+      firewallMode: 'Prevention'
+      ruleSetType: 'OWASP'
+      ruleSetVersion: '3.1'
+      requestBodyCheck: true
+      maxRequestBodySizeInKb: 128
+      fileUploadLimitInMb: 128
     }
-  ]
-  enableHttp2: false
-  webApplicationFirewallConfiguration: {
-    enabled: true
-    firewallMode: 'prevention'
-    ruleSetType: 'OWASP'
-    ruleSetVersion: '3.1'
-    requestBodyCheck: true
-    maxRequestBodySizeInKb: 128
-    fileUploadLimitInMb: 128
-  }
-  firewallPolicy: {
-    id: wafpolicy.id
-  }
-
+    firewallPolicy: {
+      id: wafpolicy.id
+    }
   }
 }
 
@@ -277,5 +271,21 @@ resource diagnosticappgw 'Microsoft.Insights/diagnosticSettings@2021-05-01-previ
         }
       }
     ]
+    metrics: [
+      {
+        category: 'AllMetrics'
+        enabled: true
+        retentionPolicy: {
+          enabled: true
+          days: 30
+        }
+      }
+    ]
   }
 }
+
+//output subnetname0 string = existinghubVnet.properties.subnets[0].name
+//output subnetname1 string = existinghubVnet.properties.subnets[1].name
+//output subnetname2 string = existinghubVnet.properties.subnets[2].name
+//output subnetname3 string = existinghubVnet.properties.subnets[3].name
+//output subnetname4 string = existinghubVnet.properties.subnets[4].name
