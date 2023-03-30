@@ -137,3 +137,18 @@ module bastionmodule 'Modules/bastion.bicep' = {
     hubvnetmodule
   ]
 }
+
+// VM module
+module vmmodule 'Modules/vm.bicep' = {
+  name: 'vm-modulename'
+  params: {
+    location: location
+    logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
+    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+    vmSubnetName: spokevnetmodule.outputs.OUTPUT_VM_SPOKE_SUBNET_NAME
+    principalId: USER_OBJECT_ID
+  }
+  dependsOn: [
+    hubvnetmodule
+  ]
+}
