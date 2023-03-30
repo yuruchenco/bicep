@@ -108,38 +108,38 @@ module peeringmodule 'Modules/vnetpeering.bicep' = {
 }
 
 // Application Gateway module
-module appgwmodule 'Modules/appgw.bicep' = {
-  name: 'appgw-modulename'
-  params: {
-    location: location
-    logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-    principalId: USER_OBJECT_ID
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}
+// module appgwmodule 'Modules/appgw.bicep' = {
+//   name: 'appgw-modulename'
+//   params: {
+//     location: location
+//     logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
+//     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+//     principalId: USER_OBJECT_ID
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//   ]
+// }
 
 // Bastion module
-module bastionmodule 'Modules/bastion.bicep' = {
-  name: 'bastion-modulename'
-  params: {
-    location: location
-    logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    bastionSubnetName: hubvnetmodule.outputs.OUTPUT_BASTION_HUB_SUBNET_NAME
-    principalId: USER_OBJECT_ID
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}
+// module bastionmodule 'Modules/bastion.bicep' = {
+//   name: 'bastion-modulename'
+//   params: {
+//     location: location
+//     logAnalyticsWorkspaceName: loganalyticsmodule.outputs.OUTPUT_LAW_NAME
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     bastionSubnetName: hubvnetmodule.outputs.OUTPUT_BASTION_HUB_SUBNET_NAME
+//     principalId: USER_OBJECT_ID
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//   ]
+// }
 
 // VM module
-module vmmodule 'Modules/vm.bicep' = {
+module vmmodule 'Modules/multi_vm.bicep' = {
   name: 'vm-modulename'
   params: {
     location: location

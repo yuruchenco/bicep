@@ -165,3 +165,4 @@ resource nsginboundspoke 'Microsoft.Network/networkSecurityGroups@2021-08-01' = 
 }
 
 output OUTPUT_SPOKE_VNET_NAME string = spokeVnet.name
+output OUTPUT_VM_SPOKE_SUBNET_NAME string = VM_SPOKE_SUBNET_NAME
