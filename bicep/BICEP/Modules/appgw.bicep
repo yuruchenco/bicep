@@ -3,10 +3,9 @@ param location string
 param hubVnetName string
 param appgwSubnetName string
 param spokeVnetName string
+param zonenumber string
 //param spokeSubnetName string
 //param spokeSubnetAddressPrefix string
-param logAnalyticsWorkspaceName string
-param principalId string
 
 // Tag values
 var TAG_VALUE = {
@@ -40,33 +39,6 @@ resource existingspokeVnet 'Microsoft.Network/virtualNetworks@2020-05-01' existi
   name: spokeVnetName
 }
 
-// Reference to the log analytics workspace
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' existing = {
-  name: logAnalyticsWorkspaceName
-}
-
-// RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-// RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(appgw.id, principalId, contributorRoleDefinition.id)
-  scope: appgw
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
-}
-
 // Deploy public ip address
 resource publicIp 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
   name: APPGW_PIP_NAME
@@ -75,6 +47,7 @@ resource publicIp 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
   sku: {
     name: 'Standard'
   }
+  zones: [zonenumber]
   properties: {
     publicIPAllocationMethod: 'Static'
     publicIPAddressVersion: 'IPv4'
@@ -133,6 +106,7 @@ resource appgw 'Microsoft.Network/applicationGateways@2021-08-01' = {
   name: APPGW_NAME
   location: location
   tags: TAG_VALUE
+  zones: [zonenumber]
   properties: {
     sku: {
       name: 'WAF_v2'
@@ -239,53 +213,6 @@ resource appgw 'Microsoft.Network/applicationGateways@2021-08-01' = {
   }
 }
 
-// Deploy diagnostic settings
-resource diagnosticappgw 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: APPGW_NAME
-  scope: appgw
-  properties: {
-    workspaceId: logAnalyticsWorkspace.id
-    logs: [
-      {
-        category: 'ApplicationGatewayAccessLog'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'ApplicationGatewayPerformanceLog'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-      {
-        category: 'ApplicationGatewayFirewallLog'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-  }
-}
-
-//output subnetname0 string = existinghubVnet.properties.subnets[0].name
-//output subnetname1 string = existinghubVnet.properties.subnets[1].name
-//output subnetname2 string = existinghubVnet.properties.subnets[2].name
-//output subnetname3 string = existinghubVnet.properties.subnets[3].name
-//output subnetname4 string = existinghubVnet.properties.subnets[4].name
+output OUTPUT_APPGW_NAME string = appgw.name
+output OUTPUT_WAFPOLICY_NAME string = wafpolicy.name
+output OUTPUT_APPGW_PIP_NAME string = publicIp.name

@@ -1,8 +1,6 @@
 // Spoke vNET
 param location string
-param logAnalyticsWorkspaceName string
 param azureFirewallName string
-param principalId string
 
 // Tag values
 var TAG_VALUE = {
@@ -40,35 +38,9 @@ var customRules = [
 ]
 */
 
-// Reference the existing Log Analytics Workspace
-resource existingloganalyticsworkspace 'Microsoft.OperationalInsights/workspaces@2021-06-01' existing = {
-  name: logAnalyticsWorkspaceName
-}
 // Reference the existing Azure Firewall
 resource azfw 'Microsoft.Network/azureFirewalls@2020-05-01' existing = {
   name: azureFirewallName
-}
-
-// RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-// RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(spokeVnet.id, principalId, contributorRoleDefinition.id)
-  scope: spokeVnet
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
 }
 
 // Deploy Route Table for SpokeVNET
@@ -124,35 +96,6 @@ resource spokeVnet 'Microsoft.Network/virtualNetworks@2020-05-01' = {
   }
 }
 
-// Deploy Diagnostic Setting on spokeVnet
-resource spokeVnetdiagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name : spokeVnet.name
-  scope: spokeVnet
-  properties: {
-    workspaceId: existingloganalyticsworkspace.id
-    logs: [
-      {
-        categoryGroup: 'AllLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-  }
-}
-
 // Deploy NSG for spokeVnet
 resource nsginboundspoke 'Microsoft.Network/networkSecurityGroups@2021-08-01' = {
   name: NSG_SPOKE_INBOUND_NAME
@@ -165,4 +108,6 @@ resource nsginboundspoke 'Microsoft.Network/networkSecurityGroups@2021-08-01' = 
 }
 
 output OUTPUT_SPOKE_VNET_NAME string = spokeVnet.name
-output OUTPUT_VM_SPOKE_SUBNET_NAME string = VM_SPOKE_SUBNET_NAME
+output OUTPUT_VM_SPOKE_SUBNET_NAME string = spokeVnet.properties.subnets[0].name
+output OUTPUT_NSG_SPOKE_INBOUND_NAME string = nsginboundspoke.name
+output OUTPUT_ROUTE_TABLE_NAME string = spokevnetroutetable.name

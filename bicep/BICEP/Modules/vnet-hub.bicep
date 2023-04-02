@@ -1,7 +1,5 @@
 // Hub vNET
 param location string
-param logAnalyticsWorkspaceName string
-param principalId string
 
 // Tag values
 var TAG_VALUE = {
@@ -22,12 +20,12 @@ var GW_HUB_SUBNET_ADDRESS_PREFIX = '192.168.2.0/27'
 var APPGW_HUB_SUBNET_NAME = 'AppGwSubnet'
 var APPGW_HUB_SUBNET_ADDRESS_PREFIX = '192.168.3.0/24'
 var DNS_HUB_SUBNET_NAME = 'DnsHubSubnet'
-var DNS_HUB_SUBNET_ADDRESS_PREFIX = '192.168.4.0/28'
+var DNS_HUB_SUBNET_ADDRESS_PREFIX = '192.168.4.0/26'
 
 // DefaultRules for NSG Inbound
 var NSG_DNS_INBOUND_NAME = 'nsg_inbound-poc-dns-stag-001'
 var NSG_DEFAULT_RULES = loadJsonContent('../default-rule-hub-nsg.json', 'DefaultRules')
-var NSG_APPGW_INBOUND_NAME = 'nsg_inbound-poc-appgw-stag-001'
+var NSG_APPGW_INBOUND_NAME = 'nsg_inbound-poc-appgwwaf-stag-001'
 // CustomRules for NSG Inbound (As you need you should uncomment this section and add your custom rules
 /*
 var customRules = [
@@ -97,33 +95,6 @@ var NSG_APPGW_CUSTOM_RULES = [
     }
   }
 ]  
-
-// Reference the existing Log Analytics Workspace
-resource existingloganalyticsworkspace 'Microsoft.OperationalInsights/workspaces@2021-06-01' existing = {
-  name: logAnalyticsWorkspaceName
-}
-
-// RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-// RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(hubVnet.id, principalId, contributorRoleDefinition.id)
-  scope: hubVnet
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
-}
 
 // Deploy NSG for dns subnet
 resource nsginbounddns 'Microsoft.Network/networkSecurityGroups@2021-08-01' = {
@@ -224,38 +195,11 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2021-08-01' = {
   }
 }
 
-// Deploy Diagnostic Setting on hubVnet
-resource hubVnetdiagnosticSetting 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name : hubVnet.name
-  scope: hubVnet
-  properties: {
-    workspaceId: existingloganalyticsworkspace.id
-    logs: [
-      {
-        categoryGroup: 'AllLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-  }
-}
-
-output OUTPUT_HUB_VNET_NAME string = VNET_HUB_NAME
+output OUTPUT_HUB_VNET_NAME string = hubVnet.name
 output OUTPUT_AZFW_HUB_SUBNET_NAME string = AZFW_HUB_SUBNET_NAME
 output OUTPUT_BASTION_HUB_SUBNET_NAME string = BASTION_HUB_SUBNET_NAME
 output OUTPUT_GW_HUB_SUBNET_NAME string = GW_HUB_SUBNET_NAME
 output OUTPUT_APPGW_HUB_SUBNET_NAME string = APPGW_HUB_SUBNET_NAME
 output OUTPUT_DNS_HUB_SUBNET_NAME string = DNS_HUB_SUBNET_NAME
+output OUTPUT_NSG_DNS_INBOUND_NAME string = nsginbounddns.name
+output OUTPUT_NSG_APPGW_INBOUND_NAME string = nsginboundappgw.name

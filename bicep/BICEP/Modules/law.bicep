@@ -1,13 +1,13 @@
 // Log Analytics WorkSpace
 param location string
-param principalId string
-//param managedIdentityId string
+param amplsName string
 
 // Log Analytics WorkSpace variables
 var LAW_NAME = 'law-poc-main-stag-001'
 var LAW_SKU = 'PerGB2018'
 var LAW_RETANTION = 30
 var LAW_SEARCH_VER = 2
+var AMPLS_ASSOCIATION_NAME = 'amplsassociation-poc-main-stag-001'
 
 // Tag Values
 var TAG_VALUE = {
@@ -17,26 +17,9 @@ Location: 'japaneast'
 Owner: 'akkoike'
 }
 
-// RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-// RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(laws.id, principalId, contributorRoleDefinition.id)
-  scope: laws
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
+// Reference to the Azure Monitor Private Link Scopes resource
+resource existingampls 'Microsoft.Insights/privateLinkScopes@2021-07-01-preview' existing = {
+  name: amplsName
 }
 
 // Deploy Log Analytics Workspace
@@ -48,10 +31,24 @@ resource laws 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
     sku: {
       name: LAW_SKU
     }
+    //publicNetworkAccessForIngestion: 'Enabled'
+    publicNetworkAccessForIngestion: 'Disabled'
+    publicNetworkAccessForQuery: 'Enabled'
     retentionInDays: LAW_RETANTION
     features: {
       searchVersion: LAW_SEARCH_VER
     }
   }
 }
-output OUTPUT_LAW_NAME string = LAW_NAME
+
+// Deploy Azure Monitor Private Link Scopes association resource
+resource amplsassociation 'Microsoft.Insights/privateLinkScopes/scopedResources@2021-07-01-preview' = {
+  parent: existingampls
+  name: AMPLS_ASSOCIATION_NAME
+  properties: {
+    linkedResourceId: laws.id
+  }
+}
+
+output OUTPUT_LAW_NAME string = laws.name
+output OUTPUT_LAW_ID string = laws.id

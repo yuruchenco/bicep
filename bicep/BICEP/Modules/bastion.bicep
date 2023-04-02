@@ -2,8 +2,7 @@
 param location string
 param hubVnetName string
 param bastionSubnetName string
-param logAnalyticsWorkspaceName string
-param principalId string
+param zonenumber string
 
 // Tag values
 var TAG_VALUE = {
@@ -19,33 +18,6 @@ var BASTION_IF_NAME = 'bastionipconf-poc-main-stag-001'
 var BASTION_PIP_NAME = 'bastionpip-poc-main-stag-001'
 var BASTION_SKU = 'Standard'
 
-// RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
-
-// RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(bastion.id, principalId, contributorRoleDefinition.id)
-  scope: bastion
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
-}
-
-//Reference the existing Log Analytics Workspace 
-resource existingloganalyticsworkspace 'Microsoft.OperationalInsights/workspaces@2021-06-01' existing = {
-  name: logAnalyticsWorkspaceName
-}
-
 // Reference the existing HubVNET
 resource existinghubvnet 'Microsoft.Network/virtualNetworks@2020-05-01' existing = {
   name: hubVnetName
@@ -59,6 +31,7 @@ resource bastionpip 'Microsoft.Network/publicIPAddresses@2020-05-01' = {
   name: BASTION_PIP_NAME
   location: location
   tags: TAG_VALUE
+  zones: [zonenumber]
   sku: {
     name: 'Standard'
   }
@@ -93,34 +66,5 @@ resource bastion 'Microsoft.Network/bastionHosts@2022-07-01' = {
   }
 }
 
-// Deploy diagnostic settings for Azure Bastion
-resource diagnosticbastion 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: 'bastiondiagnosticsettings'
-  scope: bastion
-  properties: {
-    workspaceId: existingloganalyticsworkspace.id
-    logs: [
-      {
-        category: 'BastionAuditLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics: [
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-  }
-}
-
-
 output OUTPUT_BASTION_NAME string = bastion.name
+output OUTPUT_BASTION_PIP_NAME string = bastionpip.name

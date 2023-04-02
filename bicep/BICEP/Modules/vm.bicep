@@ -2,8 +2,8 @@
 param location string
 param spokeVnetName string
 param vmSubnetName string
-param logAnalyticsWorkspaceName string
-param principalId string
+param vmNumber int
+
 
 // Tag values
 var TAG_VALUE = {
@@ -14,29 +14,29 @@ var TAG_VALUE = {
   }
 
  // VM variables
-var vmName = 'vm1'
-var adminUsername = 'azureuser'
-var adminPassword = 'P@ssw0rd1234'
-var vmSize = 'Standard_D2s_v3'
-var vmImagePublisher = 'Canonical'
-var vmImageOffer = 'UbuntuServer'
-var vmImageSku = '18.04-LTS'
-var vmImageVersion = 'latest'
-var vmNicName = '${vmName}-nic'
-var vmStorageAccountContainerName = 'vhds'
-var vmStorageAccountType = 'Standard_LRS'
-var vmOSDiskName = '${vmName}-osdisk'
-var vmDataDiskName = '${vmName}-datadisk'
-var vmDataDiskSize = 1023
-var vmDataDiskCaching = 'ReadWrite'
+var VM_NAME = 'vm${vmNumber}'
+var ADMIN_USERNAME = 'azureuser'
+var ADMIN_PASSWORD = 'P@ssw0rd1234'
+var VM_SIZE = 'Standard_D2s_v3'
+var VM_IMAGE_PUBLISHER = 'Canonical'
+var VM_IMAGE_OFFER = 'UbuntuServer'
+var VM_IMAGE_SKU = '18.04-LTS'
+var VM_IMAGE_VERSION = 'latest'
+var VM_NIC_NAME = '${VM_NAME}-nic'
+var VM_STORAGE_ACCOUNT_TYPE = 'Standard_LRS'
+var VM_OS_DISK_NAME = '${VM_NAME}-osdisk'
+var VM_DATA_DISK_NAME = '${VM_NAME}-datadisk'
+var VM_DATA_DISK_SIZE = 1023
+var VM_DATA_DISK_CACHING = 'ReadWrite'
+var ZONES = '1'
 
 
 
 
 // Reference to the log analytics workspace
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' existing = {
-  name: logAnalyticsWorkspaceName
-}
+// resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' existing = {
+//   name: logAnalyticsWorkspaceName
+// }
 
 // Reference the existing SpokeVNET
 resource existingspokevnet 'Microsoft.Network/virtualNetworks@2020-05-01' existing = {
@@ -46,29 +46,30 @@ resource existingspokevnet 'Microsoft.Network/virtualNetworks@2020-05-01' existi
   }
 }
   // RBAC Configuration
-resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-  //scope: subscription()
-  // Owner
-  //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-  // Contributer
-  name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-  // Reader
-  //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-}
+// resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
+//   //scope: subscription()
+//   // Owner
+//   //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
+//   // Contributer
+//   name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+//   // Reader
+//   //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
+// }
 
 // RBAC assignment
-resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid(vm.id, principalId, contributorRoleDefinition.id)
-  scope: vm
-  properties: {
-    roleDefinitionId: contributorRoleDefinition.id
-    principalId: principalId
-    principalType: 'User'
-  }
-}
+// resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+//   name: guid(vm.id, principalId, contributorRoleDefinition.id)
+//   scope: vm
+//   properties: {
+//     roleDefinitionId: contributorRoleDefinition.id
+//     principalId: principalId
+//     principalType: 'User'
+//   }
+// }
 
+//Deploy nic
 resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
-  name: vmNicName
+  name: VM_NIC_NAME
   location: location
   properties: {
     ipConfigurations: [
@@ -85,36 +86,40 @@ resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
   }
 }
 
+//Deploy vm
 resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
-  name: vmName
+  name: VM_NAME
   location: location
   tags:TAG_VALUE
+  zones: [
+    ZONES
+  ]
   properties:{
     hardwareProfile: {
-      vmSize: vmSize
+      vmSize: VM_SIZE
     }
     storageProfile: {
       imageReference: {
-        publisher: vmImagePublisher
-        offer: vmImageOffer
-        sku: vmImageSku
-        version: vmImageVersion
+        publisher: VM_IMAGE_PUBLISHER
+        offer: VM_IMAGE_OFFER
+        sku: VM_IMAGE_SKU
+        version: VM_IMAGE_VERSION
       }
       osDisk: {
-        name: vmOSDiskName
+        name: VM_OS_DISK_NAME
         createOption: 'FromImage'
         caching: 'ReadWrite'
         managedDisk: {
-          storageAccountType: vmStorageAccountType
+          storageAccountType: VM_STORAGE_ACCOUNT_TYPE
         }
         diskSizeGB: 30
       }
       dataDisks: [
         {
-          name: vmDataDiskName
+          name: VM_DATA_DISK_NAME
           createOption: 'Empty'
-          caching: vmDataDiskCaching
-          diskSizeGB: vmDataDiskSize
+          caching: VM_DATA_DISK_CACHING
+          diskSizeGB: VM_DATA_DISK_SIZE
           lun: 0
         }
       ]
@@ -127,9 +132,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
       ]
     }
     osProfile:{
-      computerName: vmName
-      adminUsername: adminUsername
-      adminPassword: adminPassword
+      computerName: VM_NAME
+      adminUsername: ADMIN_USERNAME
+      adminPassword: ADMIN_PASSWORD
       linuxConfiguration: {
         disablePasswordAuthentication: false
       }
@@ -137,34 +142,122 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
   }
 }
 
-//Deploy diagnostic settings
-resource diagnosticvm 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  name: '${vmName}-diagnostic'
-  scope: vm
+//Deploy vm extension DependencyAgent
+resource vmExtensionDependencyAgent 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
+  name: '${VM_NAME}-DependencyAgent'
+  parent: vm
+  location: location
   properties: {
-    workspaceId: logAnalyticsWorkspace.id
-    logs: [
-      {
-        category: 'AllLogs'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
-    metrics:[
-      {
-        category: 'AllMetrics'
-        enabled: true
-        retentionPolicy: {
-          enabled: true
-          days: 30
-        }
-      }
-    ]
+    publisher: 'Microsoft.Azure.Monitoring.DependencyAgent'
+    type: 'DependencyAgentLinux'
+    typeHandlerVersion: '9.10'
+    autoUpgradeMinorVersion: true
+    settings: {
+      enableAMA: true
+    }
+    protectedSettings: {}
   }
 }
+
+//Deploy vm extension AzureMonitorForLinux
+resource vmExtensionAzureMonitorForLinux 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
+  name: '${VM_NAME}AzureMonitorForLinux'
+  parent: vm
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Monitor'
+    type: 'AzureMonitorLinuxAgent'
+    typeHandlerVersion: '1.21'
+    autoUpgradeMinorVersion: true
+  }
+}
+
+// vmInsights collection rules
+// resource vmInsightsCollectionRules 'Microsoft.Insights/dataCollectionRules@2021-04-01' = {
+//   name: '${VM_NAME}-vmInsightsCollectionRules'
+//   location: location
+//   kind:'Linux'
+//   properties:{
+//     dataSources:{
+//       performanceCounters:[
+//         {
+//           name:'VMInsightsPerCounters'
+//           streams:[
+//             'Microsoft-InsightsMetrics'
+//           ]
+//           samplingFrequencyInSeconds:60
+//           counterSpecifiers:[
+//             '\\VMInsight\\%DetailMetrics'
+//           ]
+//         }
+//       ]
+//       extensions:[
+//         {
+//           streams:[
+//             'Microsoft-ServiceMap'
+//           ]
+//           extensionName:'DependencyAgent'
+//           name:'DependencyAgentDataSource'
+//         }
+//       ]
+//     }
+//     destinations:{
+//       logAnalytics:[
+//         {
+//         workspaceResourceId:logAnalyticsWorkspace.id
+//         name: 'lab-je-log'
+//       }
+//     ]
+//   }
+//   dataFlows:[
+//     {
+//       streams:[
+//         'Microsoft-InsightsMetrics'
+//       ]
+//       destinations:[
+//         'lab-je-log'
+//       ]
+//     }
+//     {
+//       streams:[
+//         'Microsoft-ServiceMap'
+//       ]
+//       destinations:[
+//         'lab-je-log'
+//       ]
+//     }
+//   ]
+// }
+// }
+
+//Deploy diagnostic settings
+// resource diagnosticvm 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+//   name: '${vmName}-diagnostic'
+//   scope: vm
+//   properties: {
+//     workspaceId: logAnalyticsWorkspace.id
+//     logs: [
+//       {
+//         category: 'AllLogs'
+//         enabled: true
+//         retentionPolicy: {
+//           enabled: true
+//           days: 30
+//         }
+//       }
+//     ]
+//     metrics:[
+//       {
+//         category: 'AllMetrics'
+//         enabled: true
+//         retentionPolicy: {
+//           enabled: true
+//           days: 30
+//         }
+//       }
+//     ]
+//   }
+// }
 
 output OUTPUT_VM_NAME string = vm.name
 output OUTPUT_NIC_NAME string = nic.name
