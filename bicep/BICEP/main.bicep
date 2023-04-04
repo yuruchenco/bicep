@@ -1,18 +1,5 @@
 /*
   Main Template
-  Please execute from Visual Studio Code (https://azure.microsoft.com/ja-jp/products/visual-studio-code)
-
-      At first:
-        Please set your User-PrincipalID(ObjectID) to ./Modules/userparam.json file because of using RBAC.
-        -> Check your USER Object ID on Azure Active Directory by using Azure Portal.
-
-      At second:
-         1. Mouse over the main.bicep file
-         2. Right click -> Deploy bicep file... -> Enter
-         3. Select your subscription and resource group
-            (no need to select parameters.json file and default location is "Japan East")
-         4. Wait for a while
-
        This template will deploy the following resources:
             - Hub vNET
             - Azure Firewall
@@ -20,7 +7,6 @@
             - Peering Hub vNET to Spoke vNET
             - Application Gateway
             - Azure Bastion
-            - VMs
             - Log Analytics Workspace
             - Azure Monitor Private Link Scope
             - RBAC for all resources (Role Assignment)
@@ -28,11 +14,17 @@
 
 */
 
-// Global variables
-param location string = resourceGroup().location
-param zonenumber string = '1'
-param vmcount int = 2
-var currentResourceGroupName = resourceGroup().name
+// Module variables
+param location string
+param zoneNumber string
+param currentResourceGroupName string
+param keyvaultName string
+param keyvaultSecretVmadminName string
+
+// Reference keyvault
+resource existingkeyvault 'Microsoft.KeyVault/vaults@2019-09-01' existing = {
+  name: keyvaultName
+}
 
 // Hub vNET module
 module hubvnetmodule 'Modules/vnet-hub.bicep' = {
@@ -47,7 +39,7 @@ module azfwmodule 'Modules/azfw.bicep' = {
   name: 'azfw-modulename'
   params: {
     location: location
-    zonenumber: zonenumber
+    zonenumber: zoneNumber
     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
     azfwSubnetName: hubvnetmodule.outputs.OUTPUT_AZFW_HUB_SUBNET_NAME
   }
@@ -86,7 +78,7 @@ module appgwmodule 'Modules/appgw.bicep' = {
   name: 'appgw-modulename'
   params: {
     location: location
-    zonenumber: zonenumber
+    zonenumber: zoneNumber
     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
     appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
@@ -101,7 +93,7 @@ module bastionmodule 'Modules/bastion.bicep' = {
   name: 'bastion-modulename'
   params: {
     location: location
-    zonenumber: zonenumber
+    zonenumber: zoneNumber
     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
     bastionSubnetName: hubvnetmodule.outputs.OUTPUT_BASTION_HUB_SUBNET_NAME
   }
@@ -109,20 +101,6 @@ module bastionmodule 'Modules/bastion.bicep' = {
     hubvnetmodule
   ]
 }
-
-// VM module
-module vmmodule 'Modules/vm.bicep' = [ for number in range(1, vmcount):{
-  name: 'vm-modulename${number}'
-  params: {
-    location: location
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-    vmSubnetName: spokevnetmodule.outputs.OUTPUT_VM_SPOKE_SUBNET_NAME
-    vmNumber: number
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}]
 
 // Azure Monitor Private Link Scope module
 module amplsmodule 'Modules/ampls.bicep' = {
@@ -146,6 +124,21 @@ module lawmodule 'Modules/law.bicep' = {
   }
   dependsOn: [
     amplsmodule
+  ]
+}
+
+// VM module
+module vmmodule 'Modules/vm.bicep' = {
+  name: 'vm-modulename'
+  params: {
+    location: location
+    zonenumber: zoneNumber
+    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+    vmSubnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_SUBNET_NAME
+    secretVmadminpassword: existingkeyvault.getSecret(keyvaultSecretVmadminName)
+  }
+  dependsOn: [
+    spokevnetmodule
   ]
 }
 
@@ -200,6 +193,7 @@ module rbacmodule 'Modules/rbac.bicep' = {
     nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
     nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
     straccName: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME
+    vmName: vmmodule.outputs.OUTPUT_VM_NAME
   }
   dependsOn: [
     appgwmodule
@@ -209,6 +203,7 @@ module rbacmodule 'Modules/rbac.bicep' = {
     hubvnetmodule
     spokevnetmodule
     amplsmodule
+    vmmodule
   ]
 }
 

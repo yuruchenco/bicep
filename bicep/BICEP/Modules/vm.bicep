@@ -1,9 +1,11 @@
-//Virtual Machine
+// Virtual Machine
 param location string
 param spokeVnetName string
 param vmSubnetName string
-param vmNumber int
-
+param vmNumber int = 1
+param zonenumber string
+@secure()
+param secretVmadminpassword string
 
 // Tag values
 var TAG_VALUE = {
@@ -15,57 +17,28 @@ var TAG_VALUE = {
 
  // VM variables
 var VM_NAME = 'vm${vmNumber}'
+var VM_MAIN_NAME = '${VM_NAME}-poc-main-stag-001'
 var ADMIN_USERNAME = 'azureuser'
-var ADMIN_PASSWORD = 'P@ssw0rd1234'
-var VM_SIZE = 'Standard_D2s_v3'
+var ADMIN_PASSWORD = 'P@ssword1234'
+var VM_SIZE = 'Standard_B1s'
 var VM_IMAGE_PUBLISHER = 'Canonical'
 var VM_IMAGE_OFFER = 'UbuntuServer'
 var VM_IMAGE_SKU = '18.04-LTS'
 var VM_IMAGE_VERSION = 'latest'
-var VM_NIC_NAME = '${VM_NAME}-nic'
-var VM_STORAGE_ACCOUNT_TYPE = 'Standard_LRS'
-var VM_OS_DISK_NAME = '${VM_NAME}-osdisk'
-var VM_DATA_DISK_NAME = '${VM_NAME}-datadisk'
+var VM_NIC_NAME = 'nic-poc-${VM_NAME}-stag-001'
+var VM_MANAGED_DISK_REDUNDANCY = 'Standard_LRS'
+var VM_OS_DISK_NAME = 'osdisk-poc-${VM_NAME}-stag-001'
+var VM_DATA_DISK_NAME = 'datadisk-poc-${VM_NAME}-stag-001'
 var VM_DATA_DISK_SIZE = 1023
-var VM_DATA_DISK_CACHING = 'ReadWrite'
-var ZONES = '1'
+var VM_DATA_DISK_CACHING = 'ReadOnly'
 
-
-
-
-// Reference to the log analytics workspace
-// resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' existing = {
-//   name: logAnalyticsWorkspaceName
-// }
-
-// Reference the existing SpokeVNET
+// Reference the existing Spoke Subnet
 resource existingspokevnet 'Microsoft.Network/virtualNetworks@2020-05-01' existing = {
   name: spokeVnetName
   resource existingvmsubnet 'subnets' existing = {
     name: vmSubnetName
   }
 }
-  // RBAC Configuration
-// resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
-//   //scope: subscription()
-//   // Owner
-//   //name: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635'
-//   // Contributer
-//   name: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-//   // Reader
-//   //name: 'acdd72a7-3385-48ef-bd42-f606fba81ae7'
-// }
-
-// RBAC assignment
-// resource roleAssignment 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-//   name: guid(vm.id, principalId, contributorRoleDefinition.id)
-//   scope: vm
-//   properties: {
-//     roleDefinitionId: contributorRoleDefinition.id
-//     principalId: principalId
-//     principalType: 'User'
-//   }
-// }
 
 //Deploy nic
 resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
@@ -79,7 +52,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
           subnet: {
             id: existingspokevnet::existingvmsubnet.id
           }
-          privateIPAllocationMethod: 'Dynamic'
+          privateIPAllocationMethod: 'Static'
         }
       }
     ]
@@ -88,12 +61,10 @@ resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
 
 //Deploy vm
 resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
-  name: VM_NAME
+  name: VM_MAIN_NAME
   location: location
   tags:TAG_VALUE
-  zones: [
-    ZONES
-  ]
+  zones: [ zonenumber ]
   properties:{
     hardwareProfile: {
       vmSize: VM_SIZE
@@ -110,7 +81,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
         createOption: 'FromImage'
         caching: 'ReadWrite'
         managedDisk: {
-          storageAccountType: VM_STORAGE_ACCOUNT_TYPE
+          storageAccountType: VM_MANAGED_DISK_REDUNDANCY
         }
         diskSizeGB: 30
       }
@@ -132,9 +103,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
       ]
     }
     osProfile:{
-      computerName: VM_NAME
+      computerName: VM_MAIN_NAME
       adminUsername: ADMIN_USERNAME
-      adminPassword: ADMIN_PASSWORD
+      adminPassword: secretVmadminpassword
       linuxConfiguration: {
         disablePasswordAuthentication: false
       }
@@ -171,93 +142,20 @@ resource vmExtensionAzureMonitorForLinux 'Microsoft.Compute/virtualMachines/exte
     autoUpgradeMinorVersion: true
   }
 }
-
-// vmInsights collection rules
-// resource vmInsightsCollectionRules 'Microsoft.Insights/dataCollectionRules@2021-04-01' = {
-//   name: '${VM_NAME}-vmInsightsCollectionRules'
-//   location: location
-//   kind:'Linux'
-//   properties:{
-//     dataSources:{
-//       performanceCounters:[
-//         {
-//           name:'VMInsightsPerCounters'
-//           streams:[
-//             'Microsoft-InsightsMetrics'
-//           ]
-//           samplingFrequencyInSeconds:60
-//           counterSpecifiers:[
-//             '\\VMInsight\\%DetailMetrics'
-//           ]
-//         }
-//       ]
-//       extensions:[
-//         {
-//           streams:[
-//             'Microsoft-ServiceMap'
-//           ]
-//           extensionName:'DependencyAgent'
-//           name:'DependencyAgentDataSource'
-//         }
-//       ]
-//     }
-//     destinations:{
-//       logAnalytics:[
-//         {
-//         workspaceResourceId:logAnalyticsWorkspace.id
-//         name: 'lab-je-log'
-//       }
-//     ]
-//   }
-//   dataFlows:[
-//     {
-//       streams:[
-//         'Microsoft-InsightsMetrics'
-//       ]
-//       destinations:[
-//         'lab-je-log'
-//       ]
-//     }
-//     {
-//       streams:[
-//         'Microsoft-ServiceMap'
-//       ]
-//       destinations:[
-//         'lab-je-log'
-//       ]
-//     }
-//   ]
-// }
-// }
-
-//Deploy diagnostic settings
-// resource diagnosticvm 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-//   name: '${vmName}-diagnostic'
-//   scope: vm
-//   properties: {
-//     workspaceId: logAnalyticsWorkspace.id
-//     logs: [
-//       {
-//         category: 'AllLogs'
-//         enabled: true
-//         retentionPolicy: {
-//           enabled: true
-//           days: 30
-//         }
-//       }
-//     ]
-//     metrics:[
-//       {
-//         category: 'AllMetrics'
-//         enabled: true
-//         retentionPolicy: {
-//           enabled: true
-//           days: 30
-//         }
-//       }
-//     ]
-//   }
-// }
+/*
+// Deploy vm extension linuxDiagnostic
+resource vmExtensionLinuxDiagnostic 'Microsoft.Compute/virtualMachines/extensions@2022-11-01' = {
+  name: '${VM_NAME}LinuxDiagnostic'
+  parent: vm
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Diagnostics'
+    type: 'LinuxDiagnostic'
+    typeHandlerVersion: '3.0'
+    autoUpgradeMinorVersion: true
+  }
+}
+*/
 
 output OUTPUT_VM_NAME string = vm.name
 output OUTPUT_NIC_NAME string = nic.name
