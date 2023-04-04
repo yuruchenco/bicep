@@ -30,8 +30,7 @@
 
 // Global variables
 param location string = resourceGroup().location
-param zonenumber string = '1'
-param vmcount int = 2
+param zoneNumber string = '1'
 var currentResourceGroupName = resourceGroup().name
 
 // Hub vNET module
@@ -47,7 +46,7 @@ module azfwmodule 'Modules/azfw.bicep' = {
   name: 'azfw-modulename'
   params: {
     location: location
-    zonenumber: zonenumber
+    zonenumber: zoneNumber
     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
     azfwSubnetName: hubvnetmodule.outputs.OUTPUT_AZFW_HUB_SUBNET_NAME
   }
@@ -86,7 +85,7 @@ module appgwmodule 'Modules/appgw.bicep' = {
   name: 'appgw-modulename'
   params: {
     location: location
-    zonenumber: zonenumber
+    zonenumber: zoneNumber
     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
     appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
@@ -97,32 +96,35 @@ module appgwmodule 'Modules/appgw.bicep' = {
 }
 
 // Bastion module
-module bastionmodule 'Modules/bastion.bicep' = {
-  name: 'bastion-modulename'
-  params: {
-    location: location
-    zonenumber: zonenumber
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    bastionSubnetName: hubvnetmodule.outputs.OUTPUT_BASTION_HUB_SUBNET_NAME
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}
+// module bastionmodule 'Modules/bastion.bicep' = {
+//   name: 'bastion-modulename'
+//   params: {
+//     location: location
+//     zonenumber: zonenumber
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     bastionSubnetName: hubvnetmodule.outputs.OUTPUT_BASTION_HUB_SUBNET_NAME
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//   ]
+// }
 
 // VM module
-module vmmodule 'Modules/vm.bicep' = [ for number in range(1, vmcount):{
-  name: 'vm-modulename${number}'
+module vmmodule 'Modules/vm.bicep' = {
+  name: 'vm-modulename'
   params: {
     location: location
     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
     vmSubnetName: spokevnetmodule.outputs.OUTPUT_VM_SPOKE_SUBNET_NAME
-    vmNumber: number
+    vmNumber: 1
+    zonenumber: zoneNumber
+    straccUri: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_VM_URI
   }
   dependsOn: [
-    hubvnetmodule
+    spokevnetmodule
+    straccmodule
   ]
-}]
+}
 
 // Azure Monitor Private Link Scope module
 module amplsmodule 'Modules/ampls.bicep' = {
@@ -181,60 +183,60 @@ module nsgflowlogmodule 'Modules/nsgflowlog.bicep' = {
 
 
 // RBAC module
-module rbacmodule 'Modules/rbac.bicep' = {
-  name: 'rbac-modulename'
-  params: {
-    appgwName: appgwmodule.outputs.OUTPUT_APPGW_NAME
-    appgwpipName: appgwmodule.outputs.OUTPUT_APPGW_PIP_NAME
-    appgwwafName: appgwmodule.outputs.OUTPUT_WAFPOLICY_NAME
-    azfwName: azfwmodule.outputs.OUTPUT_AZFW_NAME
-    azfwpipName: azfwmodule.outputs.OUTPUT_AZFW_PIP_NAME
-    bastionName: bastionmodule.outputs.OUTPUT_BASTION_NAME
-    bastionpipName: bastionmodule.outputs.OUTPUT_BASTION_PIP_NAME
-    lawName: lawmodule.outputs.OUTPUT_LAW_NAME
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-    amplsName: amplsmodule.outputs.OUTPUT_AMPLS_NAME
-    peName: amplsmodule.outputs.OUTPUT_PE_NAME
-    nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
-    nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
-    nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
-    straccName: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME
-  }
-  dependsOn: [
-    appgwmodule
-    bastionmodule
-    lawmodule
-    azfwmodule
-    hubvnetmodule
-    spokevnetmodule
-    amplsmodule
-  ]
-}
+// module rbacmodule 'Modules/rbac.bicep' = {
+//   name: 'rbac-modulename'
+//   params: {
+//     appgwName: appgwmodule.outputs.OUTPUT_APPGW_NAME
+//     appgwpipName: appgwmodule.outputs.OUTPUT_APPGW_PIP_NAME
+//     appgwwafName: appgwmodule.outputs.OUTPUT_WAFPOLICY_NAME
+//     azfwName: azfwmodule.outputs.OUTPUT_AZFW_NAME
+//     azfwpipName: azfwmodule.outputs.OUTPUT_AZFW_PIP_NAME
+//     bastionName: bastionmodule.outputs.OUTPUT_BASTION_NAME
+//     bastionpipName: bastionmodule.outputs.OUTPUT_BASTION_PIP_NAME
+//     lawName: lawmodule.outputs.OUTPUT_LAW_NAME
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+//     amplsName: amplsmodule.outputs.OUTPUT_AMPLS_NAME
+//     peName: amplsmodule.outputs.OUTPUT_PE_NAME
+//     nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
+//     nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
+//     nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
+//     straccName: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME
+//   }
+//   dependsOn: [
+//     appgwmodule
+//     bastionmodule
+//     lawmodule
+//     azfwmodule
+//     hubvnetmodule
+//     spokevnetmodule
+//     amplsmodule
+//   ]
+// }
 
 // Diagnostic Settings module
-module diagsettingsmodule 'Modules/diagnostic.bicep' = {
-  name: 'diagsettings-modulename'
-  params: {
-    logAnalyticsWorkspaceName: lawmodule.outputs.OUTPUT_LAW_NAME
-    appgwName: appgwmodule.outputs.OUTPUT_APPGW_NAME
-    azfwName: azfwmodule.outputs.OUTPUT_AZFW_NAME
-    bastionName: bastionmodule.outputs.OUTPUT_BASTION_NAME
-    pipappgwName: appgwmodule.outputs.OUTPUT_APPGW_PIP_NAME
-    pipazfwName: azfwmodule.outputs.OUTPUT_AZFW_PIP_NAME
-    pipbastionName: bastionmodule.outputs.OUTPUT_BASTION_PIP_NAME
-    nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
-    nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
-    nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
-    straccNsgFlowLogName: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME
-  }
-  dependsOn: [
-    appgwmodule
-    bastionmodule
-    lawmodule
-    azfwmodule
-    hubvnetmodule
-    spokevnetmodule
-    amplsmodule
-  ]
-}
+// module diagsettingsmodule 'Modules/diagnostic.bicep' = {
+//   name: 'diagsettings-modulename'
+//   params: {
+//     logAnalyticsWorkspaceName: lawmodule.outputs.OUTPUT_LAW_NAME
+//     appgwName: appgwmodule.outputs.OUTPUT_APPGW_NAME
+//     azfwName: azfwmodule.outputs.OUTPUT_AZFW_NAME
+//     bastionName: bastionmodule.outputs.OUTPUT_BASTION_NAME
+//     pipappgwName: appgwmodule.outputs.OUTPUT_APPGW_PIP_NAME
+//     pipazfwName: azfwmodule.outputs.OUTPUT_AZFW_PIP_NAME
+//     pipbastionName: bastionmodule.outputs.OUTPUT_BASTION_PIP_NAME
+//     nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
+//     nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
+//     nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
+//     straccNsgFlowLogName: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME
+//   }
+//   dependsOn: [
+//     appgwmodule
+//     bastionmodule
+//     lawmodule
+//     azfwmodule
+//     hubvnetmodule
+//     spokevnetmodule
+//     amplsmodule
+//   ]
+// }

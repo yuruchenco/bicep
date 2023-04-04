@@ -3,7 +3,8 @@ param location string
 param spokeVnetName string
 param vmSubnetName string
 param vmNumber int
-
+param zonenumber string
+param straccUri string
 
 // Tag values
 var TAG_VALUE = {
@@ -15,20 +16,23 @@ var TAG_VALUE = {
 
  // VM variables
 var VM_NAME = 'vm${vmNumber}'
+var VM_MAIN_NAME = '${VM_NAME}-poc-main-stag-001'
 var ADMIN_USERNAME = 'azureuser'
 var ADMIN_PASSWORD = 'P@ssw0rd1234'
-var VM_SIZE = 'Standard_D2s_v3'
+var VM_SIZE = 'Standard_B1s'
 var VM_IMAGE_PUBLISHER = 'Canonical'
 var VM_IMAGE_OFFER = 'UbuntuServer'
 var VM_IMAGE_SKU = '18.04-LTS'
 var VM_IMAGE_VERSION = 'latest'
-var VM_NIC_NAME = '${VM_NAME}-nic'
-var VM_STORAGE_ACCOUNT_TYPE = 'Standard_LRS'
-var VM_OS_DISK_NAME = '${VM_NAME}-osdisk'
-var VM_DATA_DISK_NAME = '${VM_NAME}-datadisk'
+var VM_NIC_NAME = 'nic-poc-${VM_NAME}-stag-001'
+var OS_MANAGED_DISK_REDUNDANCY = 'Standard_LRS'
+var DATA_MANAGED_DISK_REDUNDANCY = 'StandardSSD_LRS'
+var VM_OS_DISK_NAME = 'osdisk-poc-${VM_NAME}-stag-001'
+var OS_DATA_DISK_CACHING = 'ReadWrite'
+var VM_DATA_DISK_NAME = 'datadisk-poc-${VM_NAME}-stag-001'
 var VM_DATA_DISK_SIZE = 1023
-var VM_DATA_DISK_CACHING = 'ReadWrite'
-var ZONES = '1'
+var VM_DATA_DISK_CACHING = 'ReadOnly'
+
 
 
 
@@ -88,15 +92,19 @@ resource nic 'Microsoft.Network/networkInterfaces@2021-05-01' = {
 
 //Deploy vm
 resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
-  name: VM_NAME
+  name: VM_MAIN_NAME
   location: location
   tags:TAG_VALUE
-  zones: [
-    ZONES
-  ]
+  zones: [ zonenumber ]
   properties:{
     hardwareProfile: {
       vmSize: VM_SIZE
+    }
+    diagnosticsProfile:{
+      bootDiagnostics:{
+        enabled: true
+        storageUri: straccUri
+      }
     }
     storageProfile: {
       imageReference: {
@@ -108,9 +116,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
       osDisk: {
         name: VM_OS_DISK_NAME
         createOption: 'FromImage'
-        caching: 'ReadWrite'
+        caching: OS_DATA_DISK_CACHING
         managedDisk: {
-          storageAccountType: VM_STORAGE_ACCOUNT_TYPE
+          storageAccountType: OS_MANAGED_DISK_REDUNDANCY
         }
         diskSizeGB: 30
       }
@@ -121,6 +129,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
           caching: VM_DATA_DISK_CACHING
           diskSizeGB: VM_DATA_DISK_SIZE
           lun: 0
+          managedDisk:{
+            storageAccountType: DATA_MANAGED_DISK_REDUNDANCY
+          }
         }
       ]
     }
@@ -132,7 +143,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2022-11-01' = {
       ]
     }
     osProfile:{
-      computerName: VM_NAME
+      computerName: VM_MAIN_NAME
       adminUsername: ADMIN_USERNAME
       adminPassword: ADMIN_PASSWORD
       linuxConfiguration: {
