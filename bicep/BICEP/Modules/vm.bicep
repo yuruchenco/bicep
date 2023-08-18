@@ -5,6 +5,18 @@ param vmSubnetName string
 param vmNumber int
 param zonenumber string
 param straccUri string
+param straccvmdiagid string
+param straccvmdiagname string
+param resourceGroupName string
+
+var accountSasProperties = {
+  default: {
+    signedServices: 'b'
+    signedPermission: 'r'
+    signedExpiry: '2020-08-20T11:00:00Z'
+    signedResourceTypes: 's'
+  }
+}
 
 // Tag values
 var TAG_VALUE = {
@@ -32,8 +44,12 @@ var OS_DATA_DISK_CACHING = 'ReadWrite'
 var VM_DATA_DISK_NAME = 'datadisk-poc-${VM_NAME}-stag-001'
 var VM_DATA_DISK_SIZE = 1023
 var VM_DATA_DISK_CACHING = 'ReadOnly'
-
-
+var VM_RECOVERY_SERVICES_VAULT_NAME = 'rsv-${VM_NAME}-stag-001'
+var vaultName = '${VM_RECOVERY_SERVICES_VAULT_NAME}-vault'
+var backupFabric = 'Azure'
+var backupPolicyName = 'DefaultPolicy'
+var protectionContainer = 'iaasvmcontainer;iaasvmcontainerv2;${resourceGroupName};${VM_MAIN_NAME}'
+var protectedItem = 'vm;iaasvmcontainerv2;${resourceGroupName};${VM_MAIN_NAME}'
 
 
 
@@ -48,6 +64,11 @@ resource existingspokevnet 'Microsoft.Network/virtualNetworks@2020-05-01' existi
   resource existingvmsubnet 'subnets' existing = {
     name: vmSubnetName
   }
+}
+
+// Reference the existing Storage Account
+resource existingstorageaccount 'Microsoft.Storage/storageAccounts@2021-06-01' existing = {
+  name: straccvmdiagname
 }
   // RBAC Configuration
 // resource contributorRoleDefinition 'Microsoft.Authorization/roleDefinitions@2018-01-01-preview' existing = {
@@ -182,6 +203,66 @@ resource vmExtensionAzureMonitorForLinux 'Microsoft.Compute/virtualMachines/exte
     autoUpgradeMinorVersion: true
   }
 }
+
+//Deploy recovery services vault
+// resource recoveryServicesVault 'Microsoft.RecoveryServices/vaults@2022-02-01' = {
+//   name: vaultName
+//   location: location
+//   sku: {
+//       name: 'RS0'
+//       tier: 'Standard'
+//   }
+//   properties: {}
+// }
+
+// //Deploy backup policy
+// resource vaultName_backupFablic_protectionContainer_protectedItem 'Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems@2022-02-01' = {
+//   name: '${vaultName}/${backupFabric}/${protectionContainer}/${protectedItem}'
+//   properties: {
+//     protectedItemType: 'Microsoft.Compute/virtualMachines'
+//     policyId: '${recoveryServicesVault.id}/backupPolicies/${backupPolicyName}'
+//     sourceResourceId: vm.id
+//   }
+// }
+
+// Deploy the Storage Account for VMDiag
+resource teststorageaccountvmdiag 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: 'testdiag${uniqueString(resourceGroup().id)}'
+  location: location
+  tags: TAG_VALUE
+  kind: 'StorageV2'
+  sku: {
+    name: 'Standard_LRS'
+  }
+}
+
+//Deploy vm diagnostics
+resource vmDiagnostic 'Microsoft.Compute/virtualMachines/extensions@2017-12-01' = {
+  name: '${VM_NAME}-vmDiagnostic'
+  parent: vm
+  location: location
+  properties: {
+    publisher: 'Microsoft.Azure.Diagnostics'
+    type: 'LinuxDiagnostic'
+    typeHandlerVersion: '3.0'
+    autoUpgradeMinorVersion: false
+    settings: {
+      strageAccount: teststorageaccountvmdiag.name
+    }
+      protectedSettings: {
+        storageAccountName: teststorageaccountvmdiag.name
+        storageAccountEndPoint: 'https://core.windows.net'
+        storageAccountSasToken: [listAccountSas(teststorageaccountvmdiag.name,'2021-04-01', {
+          signedServices: 'b'
+          signedPermission: 'rw'
+          signedExpiry: '2122-08-20T11:00:00Z'
+          signedResourceTypes: 'o'
+        }).accountSasToken]
+        //storageAccountKey: [listKeys(resourceId('Microsoft.Storage/storageAccounts', existingstorageaccount.name), '2021-04-01').keys[0].value]
+      }
+  }
+}
+
 
 // vmInsights collection rules
 // resource vmInsightsCollectionRules 'Microsoft.Insights/dataCollectionRules@2021-04-01' = {

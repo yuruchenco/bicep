@@ -1,6 +1,6 @@
 // Spoke vNET
 param location string
-param azureFirewallName string
+//param azureFirewallName string
 
 // Tag values
 var TAG_VALUE = {
@@ -39,29 +39,29 @@ var customRules = [
 */
 
 // Reference the existing Azure Firewall
-resource azfw 'Microsoft.Network/azureFirewalls@2020-05-01' existing = {
-  name: azureFirewallName
-}
+// resource azfw 'Microsoft.Network/azureFirewalls@2020-05-01' existing = {
+//   name: azureFirewallName
+// }
 
-// Deploy Route Table for SpokeVNET
-resource spokevnetroutetable 'Microsoft.Network/routeTables@2020-05-01' = {
-  name: ROUTE_TABLE_NAME
-  location: location
-  tags: TAG_VALUE
-  properties: {
-    disableBgpRoutePropagation: false
-    routes: [
-      {
-        name: 'RouteTableForSpokeVnet'
-        properties: {
-          addressPrefix: '0.0.0.0/0'
-          nextHopType: 'VirtualAppliance'
-          nextHopIpAddress: azfw.properties.ipConfigurations[0].properties.privateIPAddress
-        }
-      }
-    ]
-  }
-}
+// // Deploy Route Table for SpokeVNET
+// resource spokevnetroutetable 'Microsoft.Network/routeTables@2020-05-01' = {
+//   name: ROUTE_TABLE_NAME
+//   location: location
+//   tags: TAG_VALUE
+//   properties: {
+//     disableBgpRoutePropagation: false
+//     routes: [
+//       {
+//         name: 'RouteTableForSpokeVnet'
+//         properties: {
+//           addressPrefix: '0.0.0.0/0'
+//           nextHopType: 'VirtualAppliance'
+//           /nextHopIpAddress: azfw.properties.ipConfigurations[0].properties.privateIPAddress
+//         }
+//       }
+//     ]
+//   }
+// }
 
 // Deploy Spoke vNET
 resource spokeVnet 'Microsoft.Network/virtualNetworks@2020-05-01' = {
@@ -87,9 +87,9 @@ resource spokeVnet 'Microsoft.Network/virtualNetworks@2020-05-01' = {
           networkSecurityGroup: {
             id: nsginboundspoke.id
           }
-          routeTable: {
-            id: spokevnetroutetable.id
-          }
+          // routeTable: {
+          //   id: spokevnetroutetable.id
+          // }
         }
       }
     ]
@@ -110,4 +110,4 @@ resource nsginboundspoke 'Microsoft.Network/networkSecurityGroups@2021-08-01' = 
 output OUTPUT_SPOKE_VNET_NAME string = spokeVnet.name
 output OUTPUT_VM_SPOKE_SUBNET_NAME string = spokeVnet.properties.subnets[0].name
 output OUTPUT_NSG_SPOKE_INBOUND_NAME string = nsginboundspoke.name
-output OUTPUT_ROUTE_TABLE_NAME string = spokevnetroutetable.name
+//output OUTPUT_ROUTE_TABLE_NAME string = spokevnetroutetable.name

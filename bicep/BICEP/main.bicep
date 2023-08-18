@@ -41,59 +41,59 @@ module hubvnetmodule 'Modules/vnet-hub.bicep' = {
   }
 }
 
-// Azure Firewall module
-module azfwmodule 'Modules/azfw.bicep' = {
-  name: 'azfw-modulename'
-  params: {
-    location: location
-    zonenumber: zoneNumber
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    azfwSubnetName: hubvnetmodule.outputs.OUTPUT_AZFW_HUB_SUBNET_NAME
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}
+// // Azure Firewall module
+// module azfwmodule 'Modules/azfw.bicep' = {
+//   name: 'azfw-modulename'
+//   params: {
+//     location: location
+//     zonenumber: zoneNumber
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     azfwSubnetName: hubvnetmodule.outputs.OUTPUT_AZFW_HUB_SUBNET_NAME
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//   ]
+// }
 
 // Spoke-vNET module
 module spokevnetmodule 'Modules/vnet-spoke.bicep' = {
   name: 'spokevnet-modulename'
   params: {
     location: location
-    azureFirewallName: azfwmodule.outputs.OUTPUT_AZFW_NAME
+    //azureFirewallName: azfwmodule.outputs.OUTPUT_AZFW_NAME
   }
   dependsOn: [
-    azfwmodule
+    //azfwmodule
   ]
 }
 
 // Peering Hub-vNET to Spoke-vNET module
-module peeringmodule 'Modules/vnetpeering.bicep' = {
-  name: 'peering-modulename'
-  params: {
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-  }
-  dependsOn: [
-    hubvnetmodule
-    spokevnetmodule
-  ]
-}
+// module peeringmodule 'Modules/vnetpeering.bicep' = {
+//   name: 'peering-modulename'
+//   params: {
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//     spokevnetmodule
+//   ]
+// }
 
 // Application Gateway module
-module appgwmodule 'Modules/appgw.bicep' = {
-  name: 'appgw-modulename'
-  params: {
-    location: location
-    zonenumber: zoneNumber
-    hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
-    appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
-    spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
-  }
-  dependsOn: [
-    hubvnetmodule
-  ]
-}
+// module appgwmodule 'Modules/appgw.bicep' = {
+//   name: 'appgw-modulename'
+//   params: {
+//     location: location
+//     zonenumber: zoneNumber
+//     hubVnetName: hubvnetmodule.outputs.OUTPUT_HUB_VNET_NAME
+//     appgwSubnetName: hubvnetmodule.outputs.OUTPUT_APPGW_HUB_SUBNET_NAME
+//     spokeVnetName: spokevnetmodule.outputs.OUTPUT_SPOKE_VNET_NAME
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//   ]
+// }
 
 // Bastion module
 // module bastionmodule 'Modules/bastion.bicep' = {
@@ -119,6 +119,10 @@ module vmmodule 'Modules/vm.bicep' = {
     vmNumber: 1
     zonenumber: zoneNumber
     straccUri: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_VM_URI
+    straccvmdiagid: straccmodule.outputs.OUTPUT_STRAGE_ACCOUNT_VMDIAG_ID
+    straccvmdiagname:straccmodule.outputs.OUTPUT_STRAGE_ACCOUNT_VMDIAG_NAME
+    resourceGroupName: currentResourceGroupName
+  
   }
   dependsOn: [
     spokevnetmodule
@@ -160,26 +164,26 @@ module straccmodule 'Modules/storageaccount.bicep' = {
 }
 
 // NSG Flow Log module
-module nsgflowlogmodule 'Modules/nsgflowlog.bicep' = {
-  name: 'nsgflowlog-modulename'
-  scope: resourceGroup('NetworkWatcherRG')
-  params: {
-    location: location
-    currentResourceGroupName: currentResourceGroupName
-    straccId: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_ID
-    lawId: lawmodule.outputs.OUTPUT_LAW_ID
-    nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
-    nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
-    nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
-  }
-  dependsOn: [
-    hubvnetmodule
-    appgwmodule
-    spokevnetmodule
-    straccmodule
-    lawmodule
-  ]
-}
+// module nsgflowlogmodule 'Modules/nsgflowlog.bicep' = {
+//   name: 'nsgflowlog-modulename'
+//   scope: resourceGroup('NetworkWatcherRG')
+//   params: {
+//     location: location
+//     currentResourceGroupName: currentResourceGroupName
+//     straccId: straccmodule.outputs.OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_ID
+//     lawId: lawmodule.outputs.OUTPUT_LAW_ID
+//     nsgappgwwafName: hubvnetmodule.outputs.OUTPUT_NSG_APPGW_INBOUND_NAME
+//     nsgdnsName: hubvnetmodule.outputs.OUTPUT_NSG_DNS_INBOUND_NAME
+//     nsgspokeName: spokevnetmodule.outputs.OUTPUT_NSG_SPOKE_INBOUND_NAME
+//   }
+//   dependsOn: [
+//     hubvnetmodule
+//     appgwmodule
+//     spokevnetmodule
+//     straccmodule
+//     lawmodule
+//   ]
+// }
 
 
 // RBAC module

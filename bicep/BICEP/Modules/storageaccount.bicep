@@ -34,7 +34,21 @@ resource storageaccountvm 'Microsoft.Storage/storageAccounts@2022-09-01' = {
   }
 }
 
+
+// Deploy the Storage Account for VMDiag
+resource storageaccountvmdiag 'Microsoft.Storage/storageAccounts@2022-09-01' = {
+  name: 'strvmdiag${uniqueString(resourceGroup().id)}'
+  location: location
+  tags: TAG_VALUE
+  kind: 'StorageV2'
+  sku: {
+    name: 'Standard_LRS'
+  }
+}
+
 output OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_ID string = storageaccountnsgflowlogs.id
 output OUTPUT_STORAGE_ACCOUNT_NSGFLOWLOG_NAME string = storageaccountnsgflowlogs.name
 output OUTPUT_STORAGE_ACCOUNT_VM_URI string = storageaccountvm.properties.primaryEndpoints.blob
 output OUTPUT_STORAGE_ACCOUNT_VM_NAME string = storageaccountvm.name
+output OUTPUT_STRAGE_ACCOUNT_VMDIAG_ID string = storageaccountvmdiag.id
+output OUTPUT_STRAGE_ACCOUNT_VMDIAG_NAME string = storageaccountvmdiag.name
