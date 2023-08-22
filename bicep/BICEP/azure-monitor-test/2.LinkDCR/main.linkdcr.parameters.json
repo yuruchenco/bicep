@@ -1,0 +1,15 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "vmName": {
+        "value": "my-linux-vm"
+      },
+      "associationName": {
+        "value": "my-windows-vm-my-dcr"
+      },
+      "dataCollectionRuleId": {
+        "value": "/subscriptions/7fd24fa5-b36e-4da0-bb40-2cd734d5fb2b/resourcegroups/rg-bicep-monitor/providers/microsoft.insights/datacollectionrules/dcr-my-linux-vm"
+      }
+     }
+  }

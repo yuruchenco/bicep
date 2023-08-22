@@ -1,0 +1,36 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+      "alertName": {
+        "value": "New Metric Alert"
+      },
+      "alertDescription": {
+        "value": "New metric alert created via template"
+      },
+      "alertSeverity": {
+        "value":3
+      },
+      "isEnabled": {
+        "value": true
+      },
+      "resourceId": {
+        "value": "/subscriptions/7fd24fa5-b36e-4da0-bb40-2cd734d5fb2b/resourceGroups/rg-bicep-monitor/providers/Microsoft.Compute/virtualMachines/my-linux-vm"
+      },
+      "metricName": {
+        "value": "Percentage CPU"
+      },
+      "operator": {
+        "value": "GreaterThan"
+      },
+      "threshold": {
+        "value": 80
+      },
+      "timeAggregation": {
+        "value": "Average"
+      },
+      "actionGroupId": {
+        "value": "/subscriptions/7fd24fa5-b36e-4da0-bb40-2cd734d5fb2b/resourceGroups/rg-monitor/providers/microsoft.insights/actiongroups/monitor-test1"
+      }
+    }
+  }

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.20.4.51522",
+      "templateHash": "10788935364971354672"
+    }
+  },
+  "parameters": {
+    "VmResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "VM Resource ID."
+      }
+    },
+    "VmLocation": {
+      "type": "string",
+      "metadata": {
+        "description": "The Virtual Machine Location."
+      }
+    },
+    "osType": {
+      "type": "string",
+      "metadata": {
+        "description": "OS Type, Example: Linux / Windows"
+      }
+    },
+    "WorkspaceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Workspace Resource ID."
+      }
+    }
+  },
+  "variables": {
+    "VmName": "[split(parameters('VmResourceId'), '/')[8]]",
+    "DaExtensionName": "[if(equals(toLower(parameters('osType')), 'windows'), 'DependencyAgentWindows', 'DependencyAgentLinux')]",
+    "DaExtensionType": "[if(equals(toLower(parameters('osType')), 'windows'), 'DependencyAgentWindows', 'DependencyAgentLinux')]",
+    "DaExtensionVersion": "9.5",
+    "MmaExtensionName": "[if(equals(toLower(parameters('osType')), 'windows'), 'MMAExtension', 'OMSExtension')]",
+    "MmaExtensionType": "[if(equals(toLower(parameters('osType')), 'windows'), 'MicrosoftMonitoringAgent', 'OmsAgentForLinux')]",
+    "MmaExtensionVersion": "[if(equals(toLower(parameters('osType')), 'windows'), '1.0', '1.4')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2021-11-01",
+      "name": "[variables('VmName')]",
+      "location": "[parameters('VmLocation')]"
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2021-11-01",
+      "name": "[format('{0}/{1}', variables('VmName'), variables('DaExtensionName'))]",
+      "location": "[parameters('VmLocation')]",
+      "properties": {
+        "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+        "type": "[variables('DaExtensionType')]",
+        "typeHandlerVersion": "[variables('DaExtensionVersion')]",
+        "autoUpgradeMinorVersion": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('VmName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "apiVersion": "2021-11-01",
+      "name": "[format('{0}/{1}', variables('VmName'), variables('MmaExtensionName'))]",
+      "location": "[parameters('VmLocation')]",
+      "properties": {
+        "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+        "type": "[variables('MmaExtensionType')]",
+        "typeHandlerVersion": "[variables('MmaExtensionVersion')]",
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "workspaceId": "[reference(parameters('WorkspaceResourceId'), '2021-12-01-preview').customerId]",
+          "azureResourceId": "[parameters('VmResourceId')]",
+          "stopOnMultipleConnections": true
+        },
+        "protectedSettings": {
+          "workspaceKey": "[listKeys(parameters('WorkspaceResourceId'), '2021-12-01-preview').primarySharedKey]"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', variables('VmName'))]"
+      ]
+    }
+  ]
+}
