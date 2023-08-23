@@ -11,7 +11,7 @@
     - `main.linkdcr.bicep`
     - `main.linkdcr.json`
     - `main.linkdcr.parameters.json`
-3. **MeteoricAlert/：** メトリックアラートを設定する資材（事前にVMを作成しておくこと）
+3. **MeteoricAlert/：** メトリックアラートを設定する資材（事前にVMとアクショングループを作成しておくこと）
     - `main.metric-alert.bicep`
     - `main.metric-alert.json`
     - `main.metric-alert.parameters.json`
